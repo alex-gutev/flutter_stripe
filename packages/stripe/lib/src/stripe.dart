@@ -98,6 +98,38 @@ class Stripe {
     instance.markNeedsSettings();
   }
 
+  /// The confirm payment callback
+  ///
+  /// This callback is called, when payment intent creation is deferred, when
+  /// the user confirms the payment
+  static ConfirmHandler? get confirmHandler => instance._confirmHandler;
+
+  static set confirmHandler(ConfirmHandler? handler) {
+    if (handler == instance._confirmHandler) {
+      return;
+    }
+
+    instance._confirmHandler = handler;
+    instance.markNeedsSettings();
+  }
+
+  /// The payment sheet result callback.
+  ///
+  /// This callback is called when the payment sheet is closed.
+  /// If the payment flow was completed successfully, null is passed to the
+  /// callback. If an error occurred or the payment sheet was cancelled, a
+  /// [StripeException] is passed to the callback.
+  static PaymentSheetCallback? get paymentSheetCallback => instance._paymentSheetCallback;
+
+  static set paymentSheetCallback(PaymentSheetCallback? callback) {
+    if (callback == instance._paymentSheetCallback) {
+      return;
+    }
+
+    instance._paymentSheetCallback = callback;
+    instance.markNeedsSettings();
+  }
+
   /// Reconfigures the Stripe platform by applying the current values for
   /// [publishableKey], [merchantIdentifier], [stripeAccountId],
   /// [threeDSecureParams], [urlScheme]
@@ -108,6 +140,8 @@ class Stripe {
         threeDSecureParams: threeDSecureParams,
         urlScheme: urlScheme,
         setReturnUrlSchemeOnAndroid: setReturnUrlSchemeOnAndroid,
+        confirmHandler: confirmHandler,
+        paymentSheetCallback: paymentSheetCallback
       );
 
   /// Exposes a [ValueListenable] whether or not GooglePay (on Android) or Apple Pay (on iOS)
@@ -685,6 +719,9 @@ class Stripe {
   String? _urlScheme;
   bool? _setReturnUrlSchemeOnAndroid;
 
+  ConfirmHandler? _confirmHandler;
+  PaymentSheetCallback? _paymentSheetCallback;
+
   static StripePlatform? __platform;
 
   // This is to manually endorse the Linux plugin until automatic registration
@@ -709,7 +746,9 @@ class Stripe {
       ThreeDSecureConfigurationParams? threeDSecureParams,
       String? merchantIdentifier,
       String? urlScheme,
-      bool? setReturnUrlSchemeOnAndroid}) async {
+      bool? setReturnUrlSchemeOnAndroid,
+      ConfirmHandler? confirmHandler,
+      PaymentSheetCallback? paymentSheetCallback}) async {
     _needsSettings = false;
     await _platform.initialise(
       publishableKey: publishableKey,
@@ -717,6 +756,8 @@ class Stripe {
       threeDSecureParams: threeDSecureParams,
       merchantIdentifier: merchantIdentifier,
       urlScheme: urlScheme,
+      confirmHandler: confirmHandler,
+      paymentSheetCallback: paymentSheetCallback
     );
   }
 

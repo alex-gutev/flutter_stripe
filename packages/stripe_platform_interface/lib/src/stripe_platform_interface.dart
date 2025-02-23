@@ -32,6 +32,8 @@ abstract class StripePlatform extends PlatformInterface {
     String? merchantIdentifier,
     String? urlScheme,
     bool? setReturnUrlSchemeOnAndroid,
+    ConfirmHandler? confirmHandler,
+    PaymentSheetCallback? paymentSheetCallback
   });
 
   Future<PaymentMethod> createPaymentMethod(

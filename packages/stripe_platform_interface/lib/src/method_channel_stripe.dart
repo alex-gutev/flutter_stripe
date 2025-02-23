@@ -42,6 +42,9 @@ class MethodChannelStripe extends StripePlatform {
   final bool _platformIsAndroid;
   ConfirmHandler? _confirmHandler;
 
+  /// Callback used to communicate the result of the payment sheet
+  PaymentSheetCallback? _paymentSheetCallback;
+
   @override
   Future<void> initialise({
     required String publishableKey,
@@ -50,6 +53,8 @@ class MethodChannelStripe extends StripePlatform {
     String? merchantIdentifier,
     String? urlScheme,
     bool? setReturnUrlSchemeOnAndroid,
+    ConfirmHandler? confirmHandler,
+    PaymentSheetCallback? paymentSheetCallback
   }) async {
     await _methodChannel.invokeMethod('initialise', {
       'publishableKey': publishableKey,
@@ -61,6 +66,13 @@ class MethodChannelStripe extends StripePlatform {
       'setReturnUrlSchemeOnAndroid': setReturnUrlSchemeOnAndroid,
     });
 
+    _confirmHandler = confirmHandler;
+    _paymentSheetCallback = paymentSheetCallback;
+
+    if (_confirmHandler != null) {
+      _addListenerForDeffered();
+    }
+
     _methodChannel.setMethodCallHandler((call) async {
       if (call.method == 'onConfirmHandlerCallback' &&
           _confirmHandler != null) {
@@ -71,6 +83,14 @@ class MethodChannelStripe extends StripePlatform {
           method,
           call.arguments['shouldSavePaymentMethod'] as bool,
         );
+      }
+      else if (call.method == 'onClosePaymentSheet' &&
+          _paymentSheetCallback != null) {
+        final error = call.arguments is Map && call.arguments.isNotEmpty
+            ? ResultParser<void>(parseJson: (json) => {}).parseError(call.arguments)
+            : null;
+
+        _paymentSheetCallback!(error);
       }
     });
   }

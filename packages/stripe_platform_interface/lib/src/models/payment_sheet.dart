@@ -571,6 +571,12 @@ enum IntentFutureUsage {
   OnSession,
 }
 
+/// Payment sheet result callback type
+///
+/// [error] is the [StripeException] representing the error that occurred if any
+/// or [null] if the payment flow was completed successfully.
+typedef PaymentSheetCallback = void Function(StripeException? error);
+
 typedef ConfirmHandler = void Function(
   PaymentMethod result,
   bool shouldSavePaymentMethod,

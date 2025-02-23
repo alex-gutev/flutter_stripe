@@ -46,7 +46,6 @@ class StripeSdkModule(val reactContext: ReactApplicationContext) : ReactContextB
   private var createPlatformPayPaymentMethodPromise: Promise? = null
   private var platformPayUsesDeprecatedTokenFlow = false
 
-  private var paymentSheetFragment: PaymentSheetFragment? = null
   private var paymentLauncherFragment: PaymentLauncherFragment? = null
   private var collectBankAccountLauncherFragment: CollectBankAccountLauncherFragment? = null
 
@@ -66,6 +65,18 @@ class StripeSdkModule(val reactContext: ReactApplicationContext) : ReactContextB
       GooglePayLauncherFragment.TAG,
       CustomerSheetFragment.TAG
     )
+
+  private val paymentSheetFragment: PaymentSheetFragment?
+    get() {
+      (currentActivity as? FragmentActivity)?.let { activity ->
+        val fragment = activity.supportFragmentManager
+          .findFragmentByTag(PaymentSheetFragment.TAG)
+
+        return fragment as? PaymentSheetFragment
+      }
+
+      return null
+    }
 
   private val mActivityEventListener = object : BaseActivityEventListener() {
     override fun onActivityResult(activity: Activity, requestCode: Int, resultCode: Int, data: Intent?) {
@@ -94,6 +105,7 @@ class StripeSdkModule(val reactContext: ReactApplicationContext) : ReactContextB
   }
 
   init {
+    appContext = reactContext
     reactContext.addActivityEventListener(mActivityEventListener)
   }
 
@@ -164,13 +176,13 @@ class StripeSdkModule(val reactContext: ReactApplicationContext) : ReactContextB
   fun initPaymentSheet(params: ReadableMap, promise: Promise) {
     getCurrentActivityOrResolveWithError(promise)?.let { activity ->
       paymentSheetFragment?.removeFragment(reactApplicationContext)
-      paymentSheetFragment = PaymentSheetFragment(reactApplicationContext, promise).also {
+      val fragment = PaymentSheetFragment(promise).also {
         val bundle = toBundleObject(params)
         it.arguments = bundle
       }
       try {
         activity.supportFragmentManager.beginTransaction()
-          .add(paymentSheetFragment!!, PaymentSheetFragment.TAG)
+          .add(fragment!!, PaymentSheetFragment.TAG)
           .commit()
       } catch (error: IllegalStateException) {
         promise.resolve(createError(ErrorType.Failed.toString(), error.message))
@@ -974,5 +986,11 @@ class StripeSdkModule(val reactContext: ReactApplicationContext) : ReactContextB
 
   companion object {
     const val NAME = "StripeSdk"
+
+    private lateinit var appContext: ReactApplicationContext
+
+    fun getAppContext(): ReactApplicationContext {
+      return appContext
+    }
   }
 }

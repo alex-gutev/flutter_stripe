@@ -30,10 +30,7 @@ import java.io.ByteArrayOutputStream
 import kotlin.Exception
 
 @OptIn(ExperimentalAllowsRemovalOfLastSavedPaymentMethodApi::class)
-class PaymentSheetFragment(
-  private val context: ReactApplicationContext,
-  private val initPromise: Promise
-) : Fragment() {
+class PaymentSheetFragment(private val initPromise: Promise? = null) : Fragment() {
   private var paymentSheet: PaymentSheet? = null
   private var flowController: PaymentSheet.FlowController? = null
   private var paymentIntentClientSecret: String? = null
@@ -44,6 +41,9 @@ class PaymentSheetFragment(
   private var presentPromise: Promise? = null
   private var paymentSheetTimedOut = false
   internal var paymentSheetIntentCreationCallback = CompletableDeferred<ReadableMap>()
+
+  private val context: ReactApplicationContext
+    get() = StripeSdkModule.getAppContext()
 
   override fun onCreateView(
     inflater: LayoutInflater,
@@ -59,7 +59,7 @@ class PaymentSheetFragment(
     super.onViewCreated(view, savedInstanceState)
     val merchantDisplayName = arguments?.getString("merchantDisplayName").orEmpty()
     if (merchantDisplayName.isEmpty()) {
-      initPromise.resolve(createError(ErrorType.Failed.toString(), "merchantDisplayName cannot be empty or null."))
+      initPromise?.resolve(createError(ErrorType.Failed.toString(), "merchantDisplayName cannot be empty or null."))
       return
     }
     val primaryButtonLabel = arguments?.getString("primaryButtonLabel")
@@ -74,20 +74,20 @@ class PaymentSheetFragment(
     intentConfiguration = try {
       buildIntentConfiguration(arguments?.getBundle("intentConfiguration"))
     } catch (error: PaymentSheetException) {
-      initPromise.resolve(createError(ErrorType.Failed.toString(), error))
+      initPromise?.resolve(createError(ErrorType.Failed.toString(), error))
       return
     }
     val appearance = try {
       buildPaymentSheetAppearance(arguments?.getBundle("appearance"), context)
     } catch (error: PaymentSheetAppearanceException) {
-      initPromise.resolve(createError(ErrorType.Failed.toString(), error))
+      initPromise?.resolve(createError(ErrorType.Failed.toString(), error))
       return
     }
 
     val customerConfiguration = try {
       buildCustomerConfiguration(arguments)
     } catch (error: PaymentSheetException) {
-      initPromise.resolve(createError(ErrorType.Failed.toString(), error))
+      initPromise?.resolve(createError(ErrorType.Failed.toString(), error))
       return
     }
 
@@ -240,7 +240,7 @@ class PaymentSheetFragment(
           callback = paymentResultCallback
         )
       }
-      initPromise.resolve(WritableNativeMap())
+      initPromise?.resolve(WritableNativeMap())
     }
   }
 
@@ -317,7 +317,7 @@ class PaymentSheetFragment(
       } ?: run {
         WritableNativeMap()
       }
-      initPromise.resolve(result)
+      initPromise?.resolve(result)
     }
 
     if (!paymentIntentClientSecret.isNullOrEmpty()) {
@@ -339,12 +339,18 @@ class PaymentSheetFragment(
         callback = onFlowControllerConfigure
       )
     } else {
-      initPromise.resolve(createError(ErrorType.Failed.toString(), "One of `paymentIntentClientSecret`, `setupIntentClientSecret`, or `intentConfiguration` is required"))
+      initPromise?.resolve(createError(ErrorType.Failed.toString(), "One of `paymentIntentClientSecret`, `setupIntentClientSecret`, or `intentConfiguration` is required"))
       return
     }
   }
 
   private fun resolvePaymentResult(map: WritableMap) {
+    val stripeSdkModule: StripeSdkModule? = context.getNativeModule(StripeSdkModule::class.java)
+
+    if (stripeSdkModule != null) {
+      stripeSdkModule.sendEvent(context, "onClosePaymentSheet", map)
+    }
+
     confirmPromise?.let {
       it.resolve(map)
       confirmPromise = null
