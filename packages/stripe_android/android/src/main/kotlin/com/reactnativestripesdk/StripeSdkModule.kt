@@ -21,7 +21,9 @@ import com.stripe.android.model.*
 import com.stripe.android.payments.bankaccount.CollectBankAccountConfiguration
 import com.stripe.android.paymentsheet.PaymentSheet
 import com.stripe.android.view.AddPaymentMethodActivityStarter
+import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.json.JSONObject
@@ -105,7 +107,7 @@ class StripeSdkModule(val reactContext: ReactApplicationContext) : ReactContextB
   }
 
   init {
-    appContext = reactContext
+    appContext.complete(reactContext)
     reactContext.addActivityEventListener(mActivityEventListener)
   }
 
@@ -966,6 +968,16 @@ class StripeSdkModule(val reactContext: ReactApplicationContext) : ReactContextB
     }
   }
 
+  /**
+   * Reset the appContext to a new uncompleted Deferred().
+   *
+   * Call this method to prevent holding on to a stale appContext after the
+   * Flutter engine has been detached.
+   */
+  fun detachEngine() {
+    appContext = CompletableDeferred()
+  }
+
   internal fun sendEvent(reactContext: ReactContext, eventName: String, params: WritableMap) {
     reactContext
       .getJSModule(DeviceEventManagerModule.RCTDeviceEventEmitter::class.java)
@@ -987,10 +999,12 @@ class StripeSdkModule(val reactContext: ReactApplicationContext) : ReactContextB
   companion object {
     const val NAME = "StripeSdk"
 
-    private lateinit var appContext: ReactApplicationContext
+    private var appContext = CompletableDeferred<ReactApplicationContext>()
 
-    fun getAppContext(): ReactApplicationContext {
-      return appContext
+    fun withAppContext(fn: (context: ReactApplicationContext) -> Unit) {
+      appContext.invokeOnCompletion {
+        fn(appContext.getCompleted())
+      }
     }
   }
 }

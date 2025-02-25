@@ -268,6 +268,7 @@ If you continue to have trouble, follow this discussion to get some support http
 
     override fun onDetachedFromEngine(@NonNull binding: FlutterPlugin.FlutterPluginBinding) {
         channel.setMethodCallHandler(null)
+        stripeSdk.detachEngine()
     }
 
     @SuppressLint("RestrictedApi")
