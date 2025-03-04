@@ -293,8 +293,13 @@ extension  StripePlugin {
             if let resultList = paymentResult as? [Any] {
                 let resultMap: NSDictionary = [:]
                 result(resultMap)
+                self.sendEvent(withName: "onClosePaymentSheet", body: [:])
             } else {
                 result(paymentResult)
+                
+                if let resultMap = paymentResult as? [String:Any] {
+                    self.sendEvent(withName: "onClosePaymentSheet", body: resultMap)
+                }
             }
         }, rejecter: rejecter(for: result))
     }
